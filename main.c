@@ -9,7 +9,7 @@
 #include "binary_sem.h"
 
 typedef struct {
-    int num_blocks;
+    int numBlocks;
     struct {
         int length;
         char character;
@@ -17,69 +17,69 @@ typedef struct {
 } SharedData;
 
 // Binary semaphore functions
-int set_semvalue(int sem_id, int sem_num, int val) {
-    union semun sem_union;
-    sem_union.val = val;
-    return semctl(sem_id, sem_num, SETVAL, sem_union);
+int setSemValue(int semID, int semNum, int val) {
+    union semun semUnion;
+    semUnion.val = val;
+    return semctl(semID, semNum, SETVAL, semUnion);
 }
 
-void del_semvalue(int sem_id) {
-    union semun sem_union;
-    semctl(sem_id, 0, IPC_RMID, sem_union);
+void delSemValue(int semID) {
+    union semun semUnion;
+    semctl(semID, 0, IPC_RMID, semUnion);
 }
 
-int reserve_semaphore(int sem_id, int sem_num) {
-    struct sembuf sem_b;
-    sem_b.sem_num = sem_num;
-    sem_b.sem_op = -1;
-    sem_b.sem_flg = SEM_UNDO;
-    return semop(sem_id, &sem_b, 1);
+int reserveSemaphore(int semID, int semNum) {
+    struct sembuf semB;
+    semB.semNum = semNum;
+    semB.semOp = -1;
+    semB.semFlg = SEM_UNDO;
+    return semop(semID, &semB, 1);
 }
 
-int release_semaphore(int sem_id, int sem_num) {
-    struct sembuf sem_b;
-    sem_b.sem_num = sem_num;
-    sem_b.sem_op = 1;
-    sem_b.sem_flg = SEM_UNDO;
-    return semop(sem_id, &sem_b, 1);
+int releaseSemaphore(int semID, int semNum) {
+    struct sembuf semB;
+    semB.semNum = semNum;
+    semB.semOp = 1;
+    semB.semFlg = SEM_UNDO;
+    return semop(semID, &semB, 1);
 }
 
-void child_process(int sem_id, int shm_id) {
-    SharedData *shared_data;
-    shared_data = shmat(shm_id, NULL, 0);
+void childProcess(int semID, int shmID) {
+    SharedData *sharedData;
+    sharedData = shmat(shmID, NULL, 0);
     srand(time(NULL) ^ (getpid() << 16));
 
-    reserve_semaphore(sem_id, 0);
+    reserveSemaphore(semID, 0);
 
-    shared_data->num_blocks = (rand() % 11) + 10;
+    sharedData->numBlocks = (rand() % 11) + 10;
 
-    for (int i = 0; i < shared_data->num_blocks; i++) {
-        shared_data->blocks[i].length = (rand() % 9) + 2;
-        shared_data->blocks[i].character = 'a' + (rand() % 26);
+    for (int i = 0; i < sharedData->numBlocks; i++) {
+        sharedData->blocks[i].length = (rand() % 9) + 2;
+        sharedData->blocks[i].character = 'a' + (rand() % 26);
     }
 
-    release_semaphore(sem_id, 1);
+    releaseSemaphore(semID, 1);
 
-    reserve_semaphore(sem_id, 0);
+    reserveSemaphore(semID, 0);
 
-    shmdt(shared_data);
+    shmdt(sharedData);
 
-    release_semaphore(sem_id, 1);
+    releaseSemaphore(semID, 1);
 }
 
-void parent_process(int sem_id, int shm_id) {
-    SharedData *shared_data;
-    shared_data = shmat(shm_id, NULL, 0);
+void parentProcess(int semID, int shmID) {
+    SharedData *sharedData;
+    sharedData = shmat(shmID, NULL, 0);
     srand(time(NULL) ^ (getpid() << 16));
 
-    reserve_semaphore(sem_id, 1);
+    reserveSemaphore(semID, 1);
 
     int width = (rand() % 6) + 10;
     int count = 0;
 
-    for (int i = 0; i < shared_data->num_blocks; i++) {
-        for (int j = 0; j < shared_data->blocks[i].length; j++) {
-            printf("%c", shared_data->blocks[i].character);
+    for (int i = 0; i < sharedData->numBlocks; i++) {
+        for (int j = 0; j < sharedData->blocks[i].length; j++) {
+            printf("%c", sharedData->blocks[i].character);
             count++;
 
             if (count == width) {
@@ -89,36 +89,36 @@ void parent_process(int sem_id, int shm_id) {
         }
     }
 
-    release_semaphore(sem_id, 0);
+    releaseSemaphore(semID, 0);
 
-    reserve_semaphore(sem_id, 1);
+    reserveSemaphore(semID, 1);
 
-    shmdt(shared_data);
+    shmdt(sharedData);
 }
 
 int main(int argc, char *argv[]) {
-    int sem_id, shm_id;
-    key_t ipc_private_key = IPC_PRIVATE;
+    int semID, shmID;
+    key_t key = IPC_PRIVATE;
 
-    sem_id = semget(ipc_private_key, 2, 0666 | IPC_CREAT);
-    set_semvalue(sem_id, 0, 1);
-    set_semvalue(sem_id, 1, 0);
+    semID = semget(key, 2, 0666 | IPC_CREAT);
+    setSemValue(semID, 0, 1);
+    setSemValue(semID, 1, 0);
 
-    shm_id = shmget(ipc_private_key, sizeof(SharedData), 0666 | IPC_CREAT);
+    shmID = shmget(key, sizeof(SharedData), 0666 | IPC_CREAT);
 
     pid_t pid = fork();
 
     if (pid == 0) {
-        child_process(sem_id, shm_id);
+        childProcess(semID, shmID);
     } 
     else {
-        parent_process(sem_id, shm_id);
+        parentProcess(semID, shmID);
         wait(NULL);
 
-        del_semvalue(sem_id);
-        semctl(sem_id, 0, IPC_RMID, NULL);
+        delSemValue(semID);
+        semctl(semID, 0, IPC_RMID, NULL);
 
-        shmctl(shm_id, IPC_RMID, NULL);
+        shmctl(shmID, IPC_RMID, NULL);
     }
 
     exit(EXIT_SUCCESS);
