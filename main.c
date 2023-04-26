@@ -7,6 +7,7 @@
 #include <sys/shm.h>
 #include <sys/sem.h>
 #include <time.h>
+#include <errno.h>
 #include "semun.h"
 #include "binary_sem.h"
 
@@ -50,9 +51,17 @@ int releaseSemaphore(int semID, int semNum) {
 void childProcess(int semID, int shmID) {
     SharedData *sharedData;
     sharedData = shmat(shmID, NULL, 0);
+    if (sharedData == (void*) -1) {
+        perror("shmat");
+        exit(EXIT_FAILURE);
+    }
+
     srand(time(NULL) ^ (getpid() << 16));
 
-    reserveSemaphore(semID, 0);
+    if (reserveSemaphore(semID, 0) == -1) {
+        perror("reserveSemaphore");
+        exit(EXIT_FAILURE);
+    }
 
     sharedData->numBlocks = (rand() % 11) + 10;
 
@@ -61,22 +70,42 @@ void childProcess(int semID, int shmID) {
         sharedData->blocks[i].character = 'a' + (rand() % 26);
     }
 
-    releaseSemaphore(semID, 1);
+    if (releaseSemaphore(semID, 1) == -1) {
+        perror("releaseSemaphore");
+        exit(EXIT_FAILURE);
+    }
 
-    reserveSemaphore(semID, 0);
+    if (reserveSemaphore(semID, 0) == -1) {
+        perror("reserveSemaphore");
+        exit(EXIT_FAILURE);
+    }
 
-    shmdt(sharedData);
+     if (shmdt(sharedData) == -1) {
+        perror("shmdt");
+        exit(EXIT_FAILURE);
+    }
 
-    releaseSemaphore(semID, 1);
+    if (releaseSemaphore(semID, 1) == -1) {
+        perror("releaseSemaphore");
+        exit(EXIT_FAILURE);
+    }
 }
 
 // Function for parent process to print blocks
 void parentProcess(int semID, int shmID) {
     SharedData *sharedData;
     sharedData = shmat(shmID, NULL, 0);
+    if (sharedData == (void*) -1) {
+        perror("shmat");
+        exit(EXIT_FAILURE);
+    }
+
     srand(time(NULL) ^ (getpid() << 16));
 
-    reserveSemaphore(semID, 1);
+    if (reserveSemaphore(semID, 1) == -1) {
+        perror("reserveSemaphore");
+        exit(EXIT_FAILURE);
+    }
 
     int width = (rand() % 6) + 10;
     int count = 0;
@@ -93,11 +122,20 @@ void parentProcess(int semID, int shmID) {
         }
     }
 
-    releaseSemaphore(semID, 0);
+    if (releaseSemaphore(semID, 0) == -1) {
+    perror("releaseSemaphore");
+    exit(EXIT_FAILURE);
+    }
 
-    reserveSemaphore(semID, 1);
+    if (reserveSemaphore(semID, 1) == -1) {
+    perror("reserveSemaphore");
+    exit(EXIT_FAILURE);
+    }
 
-    shmdt(sharedData);
+    if (shmdt(sharedData) == -1) {
+    perror("shmdt");
+    exit(EXIT_FAILURE);
+    }
 }
 
 int main(int argc, char *argv[]) {
@@ -105,24 +143,55 @@ int main(int argc, char *argv[]) {
     key_t key = IPC_PRIVATE;
 
     semID = semget(key, 2, 0666 | IPC_CREAT);
-    setSemValue(semID, 0, 1);
-    setSemValue(semID, 1, 0);
+    if (semID == -1) {
+    perror("semget");
+    exit(EXIT_FAILURE);
+    }
+
+    if (setSemValue(semID, 0, 1) == -1) {
+    perror("setSemValue");
+    exit(EXIT_FAILURE);
+    }
+    
+    if (setSemValue(semID, 1, 0) == -1) {
+    perror("setSemValue");
+    exit(EXIT_FAILURE);
+    }
 
     shmID = shmget(key, sizeof(SharedData), 0666 | IPC_CREAT);
+    if (shmID == -1) {
+    perror("shmget");
+    exit(EXIT_FAILURE);
+    }
 
     pid_t pid = fork();
+    if (pid == -1) {
+    perror("fork");
+    exit(EXIT_FAILURE);
+    }
 
     if (pid == 0) {
         childProcess(semID, shmID);
     } 
+    
     else {
         parentProcess(semID, shmID);
         wait(NULL);
 
-        delSemValue(semID);
-        semctl(semID, 0, IPC_RMID, NULL);
-
-        shmctl(shmID, IPC_RMID, NULL);
+        if (delSemValue(semID) == -1) {
+        perror("delSemValue");
+        exit(EXIT_FAILURE);
+        }
+        
+        if (semctl(semID, 0, IPC_RMID, NULL) == -1) {
+        perror("semctl");
+        exit(EXIT_FAILURE);
+        }
+        
+        if (shmctl(shmID, IPC_RMID, NULL) == -1) {
+        perror("shmctl");
+        exit(EXIT_FAILURE);
+        }
     }
 
     exit(EXIT_SUCCESS);
