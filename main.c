@@ -44,6 +44,7 @@ int releaseSemaphore(int semID, int semNum) {
     return semop(semID, &semB, 1);
 }
 
+// Function for child process to generate blocks
 void childProcess(int semID, int shmID) {
     SharedData *sharedData;
     sharedData = shmat(shmID, NULL, 0);
@@ -67,6 +68,7 @@ void childProcess(int semID, int shmID) {
     releaseSemaphore(semID, 1);
 }
 
+// Function for parent process to print blocks
 void parentProcess(int semID, int shmID) {
     SharedData *sharedData;
     sharedData = shmat(shmID, NULL, 0);
