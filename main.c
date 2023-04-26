@@ -8,6 +8,14 @@
 #include "semun.h"
 #include "binary_sem.h"
 
+typedef struct {
+    int num_blocks;
+    struct {
+        int length;
+        char character;
+    } blocks[20];
+} SharedData;
+
 // Binary semaphore functions
 int set_semvalue(int sem_id, int sem_num, int val) {
     union semun sem_union;
@@ -35,14 +43,6 @@ int release_semaphore(int sem_id, int sem_num) {
     sem_b.sem_flg = SEM_UNDO;
     return semop(sem_id, &sem_b, 1);
 }
-
-typedef struct {
-    int num_blocks;
-    struct {
-        int length;
-        char character;
-    } blocks[20];
-} SharedData;
 
 void child_process(int sem_id, int shm_id) {
     SharedData *shared_data;
@@ -110,7 +110,8 @@ int main(int argc, char *argv[]) {
 
     if (pid == 0) {
         child_process(sem_id, shm_id);
-    } else {
+    } 
+    else {
         parent_process(sem_id, shm_id);
         wait(NULL);
 
@@ -120,5 +121,5 @@ int main(int argc, char *argv[]) {
         shmctl(shm_id, IPC_RMID, NULL);
     }
 
-    return 0;
+    exit(EXIT_SUCCESS);
 }
