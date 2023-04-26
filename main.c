@@ -26,24 +26,25 @@ int setSemValue(int semID, int semNum, int val) {
     return semctl(semID, semNum, SETVAL, semUnion);
 }
 
-void delSemValue(int semID) {
+int delSemValue(int semID) {
     union semun semUnion;
-    semctl(semID, 0, IPC_RMID, semUnion);
+    return semctl(semID, 0, IPC_RMID, semUnion);
 }
+
 
 int reserveSemaphore(int semID, int semNum) {
     struct sembuf semB;
-    semB.semNum = semNum;
-    semB.semOp = -1;
-    semB.semFlg = SEM_UNDO;
+    semB.sem_num = semNum;
+    semB.sem_op = -1;
+    semB.sem_flg = SEM_UNDO;
     return semop(semID, &semB, 1);
 }
 
 int releaseSemaphore(int semID, int semNum) {
     struct sembuf semB;
-    semB.semNum = semNum;
-    semB.semOp = 1;
-    semB.semFlg = SEM_UNDO;
+    semB.sem_num = semNum;
+    semB.sem_op = 1;
+    semB.sem_flg = SEM_UNDO;
     return semop(semID, &semB, 1);
 }
 
