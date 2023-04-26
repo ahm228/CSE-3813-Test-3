@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.>
+#include <unistd.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <sys/ipc.h>
@@ -58,33 +58,40 @@ void childProcess(int semID, int shmID) {
 
     srand(time(NULL) ^ (getpid() << 16));
 
+    // Reserve the first semaphore to prevent the parent from accessing shared memory
     if (reserveSemaphore(semID, 0) == -1) {
         perror("reserveSemaphore");
         exit(EXIT_FAILURE);
     }
 
+    // Generate a random number of blocks to generate
     sharedData->numBlocks = (rand() % 11) + 10;
 
+    // Generate random data for each block
     for (int i = 0; i < sharedData->numBlocks; i++) {
         sharedData->blocks[i].length = (rand() % 9) + 2;
         sharedData->blocks[i].character = 'a' + (rand() % 26);
     }
 
+    // Release the first semaphore to allow the parent to access shared memory
     if (releaseSemaphore(semID, 1) == -1) {
         perror("releaseSemaphore");
         exit(EXIT_FAILURE);
     }
 
+    // Wait for the parent to finish accessing shared memory
     if (reserveSemaphore(semID, 0) == -1) {
         perror("reserveSemaphore");
         exit(EXIT_FAILURE);
     }
 
-     if (shmdt(sharedData) == -1) {
+    // Detach from shared memory
+    if (shmdt(sharedData) == -1) {
         perror("shmdt");
         exit(EXIT_FAILURE);
     }
 
+    // Release the second semaphore to allow the parent to continue
     if (releaseSemaphore(semID, 1) == -1) {
         perror("releaseSemaphore");
         exit(EXIT_FAILURE);
@@ -102,14 +109,17 @@ void parentProcess(int semID, int shmID) {
 
     srand(time(NULL) ^ (getpid() << 16));
 
+    // Wait for the child to finish generating blocks
     if (reserveSemaphore(semID, 1) == -1) {
         perror("reserveSemaphore");
         exit(EXIT_FAILURE);
     }
 
+    // Generate a random width for the output block
     int width = (rand() % 6) + 10;
     int count = 0;
 
+    // Print the blocks
     for (int i = 0; i < sharedData->numBlocks; i++) {
         for (int j = 0; j < sharedData->blocks[i].length; j++) {
             printf("%c", sharedData->blocks[i].character);
@@ -122,16 +132,19 @@ void parentProcess(int semID, int shmID) {
         }
     }
 
+    // Release the first semaphore to allow the child to continue
     if (releaseSemaphore(semID, 0) == -1) {
     perror("releaseSemaphore");
     exit(EXIT_FAILURE);
     }
 
+    // Wait for the child to finish detaching from shared memory
     if (reserveSemaphore(semID, 1) == -1) {
     perror("reserveSemaphore");
     exit(EXIT_FAILURE);
     }
 
+    // Detach from shared memory
     if (shmdt(sharedData) == -1) {
     perror("shmdt");
     exit(EXIT_FAILURE);
@@ -142,6 +155,7 @@ int main(int argc, char *argv[]) {
     int semID, shmID;
     key_t key = IPC_PRIVATE;
 
+    // Create the semaphore set
     semID = semget(key, 2, 0666 | IPC_CREAT);
     if (semID == -1) {
     perror("semget");
@@ -158,6 +172,7 @@ int main(int argc, char *argv[]) {
     exit(EXIT_FAILURE);
     }
 
+    // Create the shared memory segment
     shmID = shmget(key, sizeof(SharedData), 0666 | IPC_CREAT);
     if (shmID == -1) {
     perror("shmget");
@@ -170,14 +185,17 @@ int main(int argc, char *argv[]) {
     exit(EXIT_FAILURE);
     }
 
+    // If the process is the child, generate the blocks
     if (pid == 0) {
         childProcess(semID, shmID);
     } 
     
+    // If the process is the parent, print the blocks and wait for the child to finish
     else {
         parentProcess(semID, shmID);
         wait(NULL);
 
+        // Release the semaphores and shared memory segment
         if (delSemValue(semID) == -1) {
         perror("delSemValue");
         exit(EXIT_FAILURE);
