@@ -23,6 +23,7 @@ typedef struct {
 int setSemValue(int semID, int semNum, int val) {
     union semun semUnion;
     semUnion.val = val;
+    
     return semctl(semID, semNum, SETVAL, semUnion);
 }
 
@@ -34,23 +35,28 @@ int delSemValue(int semID) {
 
 int reserveSemaphore(int semID, int semNum) {
     struct sembuf semB;
+
     semB.sem_num = semNum;
     semB.sem_op = -1;
     semB.sem_flg = SEM_UNDO;
+
     return semop(semID, &semB, 1);
 }
 
 int releaseSemaphore(int semID, int semNum) {
     struct sembuf semB;
+
     semB.sem_num = semNum;
     semB.sem_op = 1;
     semB.sem_flg = SEM_UNDO;
+
     return semop(semID, &semB, 1);
 }
 
 // Function for child process to generate blocks
 void childProcess(int semID, int shmID) {
     SharedData *sharedData;
+
     sharedData = shmat(shmID, NULL, 0);
     if (sharedData == (void*) -1) {
         perror("shmat");
@@ -102,13 +108,14 @@ void childProcess(int semID, int shmID) {
 // Function for parent process to print blocks
 void parentProcess(int semID, int shmID) {
     SharedData *sharedData;
+
     sharedData = shmat(shmID, NULL, 0);
     if (sharedData == (void*) -1) {
         perror("shmat");
         exit(EXIT_FAILURE);
     }
 
-    srand(time(NULL) ^ (getpid() << 16));
+    srand(time(NULL) ^ (getpid() << 16)); //outrageous rng, should work well
 
     // Wait for the child to finish generating blocks
     if (reserveSemaphore(semID, 1) == -1) {
