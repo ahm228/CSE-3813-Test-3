@@ -127,18 +127,44 @@ void parentProcess(int semID, int shmID) {
     int width = (rand() % 6) + 10;
     int count = 0;
 
+    // Print the top border of the block
+    printf("+");
+
+    for (int i = 0; i < width; i++) {
+        printf("-");
+    }
+
+    printf("+\n");
+        
     // Print the blocks
     for (int i = 0; i < sharedData->numBlocks; i++) {
         for (int j = 0; j < sharedData->blocks[i].length; j++) {
             printf("%c", sharedData->blocks[i].character);
             count++;
-
+            
             if (count == width) {
-                printf("\n");
+                printf("|\n");
                 count = 0;
             }
         }
     }
+
+    // Print the bottom border of the block
+    if (count != 0) {
+        for (int i = count; i < width; i++) {
+            printf(" ");
+        }
+
+        printf("|\n");
+    }
+
+    printf("+");
+
+    for (int i = 0; i < width; i++) {
+        printf("-");
+    }
+    
+    printf("+\n");
 
     // Release the first semaphore to allow the child to continue
     if (releaseSemaphore(semID, 0) == -1) {
