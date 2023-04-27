@@ -133,36 +133,37 @@ void parentProcess(int semID, int shmID) {
     for (int i = 0; i < width; i++) {
         printf("-");
     }
-    
+
     printf("+\n");
 
     // Print the blocks
+    int lineStart = 1;
+
     for (int i = 0; i < sharedData->numBlocks; i++) {
-        printf("|");
         for (int j = 0; j < sharedData->blocks[i].length; j++) {
+            if (lineStart) {
+                printf("|");
+                lineStart = 0;
+            }
+
             printf("%c", sharedData->blocks[i].character);
             count++;
 
-            if (count == width) {
-                printf("|\n|");
+            if (count == width || j == sharedData->blocks[i].length - 1) {
+                for (int k = count; k < width; k++) {
+                    printf(" ");
+                }
+                
+                printf("|\n");
                 count = 0;
+                lineStart = 1;
             }
         }
     }
 
     // Print the bottom border of the block
-    if (count != 0) {
-        for (int i = count; i < width; i++) {
-            printf(" ");
-        }
-        printf("|\n");
-    } 
-    else {
-        printf("+\n");
-    }
-
     printf("+");
-    
+
     for (int i = 0; i < width; i++) {
         printf("-");
     }
@@ -171,22 +172,23 @@ void parentProcess(int semID, int shmID) {
 
     // Release the first semaphore to allow the child to continue
     if (releaseSemaphore(semID, 0) == -1) {
-    perror("releaseSemaphore");
-    exit(EXIT_FAILURE);
+        perror("releaseSemaphore");
+        exit(EXIT_FAILURE);
     }
 
     // Wait for the child to finish detaching from shared memory
     if (reserveSemaphore(semID, 1) == -1) {
-    perror("reserveSemaphore");
-    exit(EXIT_FAILURE);
+        perror("reserveSemaphore");
+        exit(EXIT_FAILURE);
     }
 
     // Detach from shared memory
     if (shmdt(sharedData) == -1) {
-    perror("shmdt");
-    exit(EXIT_FAILURE);
+        perror("shmdt");
+        exit(EXIT_FAILURE);
     }
 }
+
 
 int main(int argc, char *argv[]) {
     int semID, shmID;
