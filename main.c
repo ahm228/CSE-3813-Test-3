@@ -133,17 +133,18 @@ void parentProcess(int semID, int shmID) {
     for (int i = 0; i < width; i++) {
         printf("-");
     }
-
+    
     printf("+\n");
-        
+
     // Print the blocks
     for (int i = 0; i < sharedData->numBlocks; i++) {
+        printf("|");
         for (int j = 0; j < sharedData->blocks[i].length; j++) {
             printf("%c", sharedData->blocks[i].character);
             count++;
-            
+
             if (count == width) {
-                printf("|\n");
+                printf("|\n|");
                 count = 0;
             }
         }
@@ -154,16 +155,18 @@ void parentProcess(int semID, int shmID) {
         for (int i = count; i < width; i++) {
             printf(" ");
         }
-
         printf("|\n");
+    } 
+    else {
+        printf("+\n");
     }
 
     printf("+");
-
+    
     for (int i = 0; i < width; i++) {
         printf("-");
     }
-    
+
     printf("+\n");
 
     // Release the first semaphore to allow the child to continue
