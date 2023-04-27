@@ -115,7 +115,7 @@ void parentProcess(int semID, int shmID) {
         exit(EXIT_FAILURE);
     }
 
-    srand(time(NULL) ^ (getpid() << 16)); //outrageous rng, should work well
+    srand(time(NULL) ^ (getpid() << 16)); // Outrageous rng, should work well
 
     // Wait for the child to finish generating blocks
     if (reserveSemaphore(semID, 1) == -1) {
@@ -137,29 +137,24 @@ void parentProcess(int semID, int shmID) {
     printf("+\n");
 
     // Print the blocks
-    int lineStart = 1;
-
+    printf("|");
     for (int i = 0; i < sharedData->numBlocks; i++) {
         for (int j = 0; j < sharedData->blocks[i].length; j++) {
-            if (lineStart) {
-                printf("|");
-                lineStart = 0;
-            }
-
             printf("%c", sharedData->blocks[i].character);
             count++;
 
-            if (count == width || j == sharedData->blocks[i].length - 1) {
-                for (int k = count; k < width; k++) {
-                    printf(" ");
-                }
-                
-                printf("|\n");
+            if (count == width) {
+                printf("|\n|");
                 count = 0;
-                lineStart = 1;
             }
         }
     }
+
+    // Fill the remaining space in the last line and print the border
+    for (int i = count; i < width; i++) {
+        printf(" ");
+    }
+    printf("|\n");
 
     // Print the bottom border of the block
     printf("+");
@@ -188,7 +183,6 @@ void parentProcess(int semID, int shmID) {
         exit(EXIT_FAILURE);
     }
 }
-
 
 int main(int argc, char *argv[]) {
     int semID, shmID;
