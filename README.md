@@ -1,2 +1,3 @@
 # CSE-3813-Test-3
  CSE 3813
+This program generates and prints random blocks of characters using shared memory and semaphores in a parent-child process setup. The child process generates the blocks while the parent process prints them. The communication between the parent and child processes is managed using a shared memory segment, and access to the shared memory is controlled by binary semaphores.
