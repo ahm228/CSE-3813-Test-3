@@ -75,7 +75,7 @@ void childProcess(int semID, int shmID) {
     }
 
     // Release the first semaphore to allow the parent to access shared memory
-    if (releaseSemaphore(semID, 1) == -1) {
+    if (releaseSemaphore(semID, 0) == -1) {
         perror("releaseSemaphore");
         exit(EXIT_FAILURE);
     }
