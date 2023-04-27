@@ -115,7 +115,7 @@ void parentProcess(int semID, int shmID) {
         exit(EXIT_FAILURE);
     }
 
-    srand(time(NULL) ^ (getpid() << 16)); //outrageous rng, should work well
+    srand(time(NULL) ^ (getpid() << 16)); // Outrageous rng, should work well
 
     // Wait for the child to finish generating blocks
     if (reserveSemaphore(semID, 1) == -1) {
@@ -127,35 +127,60 @@ void parentProcess(int semID, int shmID) {
     int width = (rand() % 6) + 10;
     int count = 0;
 
+    // Print the top border of the block
+    printf("+");
+
+    for (int i = 0; i < width; i++) {
+        printf("-");
+    }
+
+    printf("+\n");
+
     // Print the blocks
+    printf("|");
     for (int i = 0; i < sharedData->numBlocks; i++) {
         for (int j = 0; j < sharedData->blocks[i].length; j++) {
             printf("%c", sharedData->blocks[i].character);
             count++;
 
             if (count == width) {
-                printf("\n");
+                printf("|\n|");
                 count = 0;
             }
         }
     }
 
+    // Fill the remaining space in the last line and print the border
+    for (int i = count; i < width; i++) {
+        printf(" ");
+    }
+    printf("|\n");
+
+    // Print the bottom border of the block
+    printf("+");
+
+    for (int i = 0; i < width; i++) {
+        printf("-");
+    }
+
+    printf("+\n");
+
     // Release the first semaphore to allow the child to continue
     if (releaseSemaphore(semID, 0) == -1) {
-    perror("releaseSemaphore");
-    exit(EXIT_FAILURE);
+        perror("releaseSemaphore");
+        exit(EXIT_FAILURE);
     }
 
     // Wait for the child to finish detaching from shared memory
     if (reserveSemaphore(semID, 1) == -1) {
-    perror("reserveSemaphore");
-    exit(EXIT_FAILURE);
+        perror("reserveSemaphore");
+        exit(EXIT_FAILURE);
     }
 
     // Detach from shared memory
     if (shmdt(sharedData) == -1) {
-    perror("shmdt");
-    exit(EXIT_FAILURE);
+        perror("shmdt");
+        exit(EXIT_FAILURE);
     }
 }
 
